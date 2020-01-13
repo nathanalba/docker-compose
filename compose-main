@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+
+###############   NETWORK   ########################  
+traefik:
+hostname: traefik
+image: traefik:v1.7.16
+container_name: traefik
+restart: always
+domainname: XXXXXXX.org
+networks:
+- default
+- traefik_proxy
+ports:
+- "80:80"
+- "443:443"
+- "9999:9999"
+dns:
+- 1.1.1.1
+environment:
+- CF_API_EMAIL=EMAIL
+- CF_API_KEY=KEY
+- CLOUDFLARE_EMAIL=EMAIL
+- CLOUDFLARE_API_KEY=API
+labels:
+traefik.enable: "true"
+traefik.backend: traefik
+traefik.protocol: http
+traefik.port: 9999
+traefik.frontend.rule: Host:traefik.XXXXX.org
+traefik.frontend.headers.SSLHost: traefik.XXXX.org
+traefik.docker.network: traefik_proxy
+traefik.frontend.passHostHeader: "true"
+traefik.frontend.headers.SSLForceHost: "true"
+traefik.frontend.headers.SSLRedirect: "true"
+traefik.frontend.headers.browserXSSFilter: "true"
+traefik.frontend.headers.contentTypeNosniff: "true"
+traefik.frontend.headers.forceSTSHeader: "true"
+traefik.frontend.headers.STSSeconds: 315360000
+traefik.frontend.headers.STSIncludeSubdomains: "true"
+traefik.frontend.headers.STSPreload: "true"
+traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
+traefik.frontend.headers.frameDeny: "true"
+traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:XXX.org'
+traefik.frontend.auth.basic.users: 'USER:HASH'
+
+volumes:
+- /var/run/docker.sock:/var/run/docker.sock:ro
