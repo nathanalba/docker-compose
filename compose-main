@@ -47,3 +47,193 @@ traefik.frontend.auth.basic.users: 'USER:HASH'
 
 volumes:
 - /var/run/docker.sock:/var/run/docker.sock:ro
+
+ddns:
+  image: oznu/cloudflare-ddns
+  container_name: ddns
+  hostname: ddns
+  environment:
+    - EMAIL=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    - API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    - ZONE=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.org
+    - PROXIED=false
+
+jellyfin:
+  image: jellyfin/jellyfin:latest
+  container_name: jellyfin
+  hostname: jellyfin
+  restart: unless-stopped
+  networks:
+    - traefik_proxy
+    - default
+  ports:
+    - "8096:8096"
+    - "8920:8920"
+  environment:
+    PUID: 1000
+    PGID: 1000
+    TZ: America/New_York
+  volumes:
+    - XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  labels:
+    traefik.enable: "true"
+    traefik.backend: jellyfin
+    traefik.protocol: http
+    traefik.port: 8096
+    traefik.frontend.rule: Host:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    traefik.frontend.headers.SSLHost: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    traefik.docker.network: traefik_proxy
+    traefik.frontend.passHostHeader: "true"
+    traefik.frontend.headers.SSLForceHost: "true"
+    traefik.frontend.headers.SSLRedirect: "true"
+    traefik.frontend.headers.browserXSSFilter: "true"
+    traefik.frontend.headers.contentTypeNosniff: "true"
+    traefik.frontend.headers.forceSTSHeader: "true"
+    traefik.frontend.headers.STSSeconds: 315360000
+    traefik.frontend.headers.STSIncludeSubdomains: "true"
+    traefik.frontend.headers.STSPreload: "true"
+    traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
+    traefik.frontend.headers.frameDeny: "true"
+    traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:xxxxxxxxxxxxxxxxxxxxxxxx'
+
+
+  guaca:
+    image: oznu/guacamole 
+    hostname: guaca
+    container_name: guaca
+    volumes:
+      - dbg:/config
+    networks:
+      - traefik_proxy
+      - default
+    labels: 
+      traefik.enable: "true" 
+      traefik.backend: guac 
+      traefik.protocol: http 
+      traefik.port: 8080 
+      traefik.frontend.rule: Host:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.frontend.headers.SSLHost: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.docker.network: traefik_proxy 
+      traefik.frontend.passHostHeader: "true" 
+      traefik.frontend.headers.SSLForceHost: "true" 
+      traefik.frontend.headers.SSLRedirect: "true" 
+      traefik.frontend.headers.browserXSSFilter: "true" 
+      traefik.frontend.headers.contentTypeNosniff: "true" 
+      traefik.frontend.headers.forceSTSHeader: "true" 
+      traefik.frontend.headers.STSSeconds: 315360000  
+      traefik.frontend.headers.STSIncludeSubdomains: "true" 
+      traefik.frontend.headers.STSPreload: "true" 
+      traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex 
+      traefik.frontend.headers.frameDeny: "true"
+      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+
+############NEXTCLOUD################
+  db: 
+    image: mariadb 
+    hostname: db 
+    container_name: mariadb 
+    volumes: 
+      - db:/var/lib/mysql 
+    environment:  
+      - MYSQL_ROOT_PASSWORD=xxxxxxxxxxxxxxxxxxxxxxxxxx
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=xxxxxxxxxxxxxx
+      - MYSQL_PASSWORD=xxxxxxxxxxxxxxxxxxxxx
+    networks:
+      - traefik_proxy
+      - default
+
+  app:
+    image: nextcloud:fpm-alpine
+    hostname: app
+    container_name: app
+    volumes:
+      - nextcloud:/var/www/html
+      - xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_PASSWORD=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - MYSQL_DATABASE=xxxxxxxxxxxxxxxxxx
+      - MYSQL_USER=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    depends_on:
+      - db 
+  web:
+    build: ./web
+    hostname: web
+    container_name: cloud
+    volumes:
+      - nextcloud:/var/www/html:ro
+    restart: unless-stopped
+    depends_on:
+      - app
+    networks:
+      - traefik_proxy
+      - default    
+    labels:
+      traefik.enable: "true"
+      traefik.backend: cloud
+      traefik.protocol: http
+      traefik.port: 80
+      traefik.frontend.rule: Host:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.frontend.headers.SSLHost: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.docker.network: traefik_proxy
+      traefik.frontend.passHostHeader: "true"
+      traefik.frontend.headers.SSLForceHost: "true"
+      traefik.frontend.headers.SSLRedirect: "true"
+      traefik.frontend.headers.browserXSSFilter: "true"
+      traefik.frontend.headers.contentTypeNosniff: "true"
+      traefik.frontend.headers.forceSTSHeader: "true"
+      traefik.frontend.headers.STSSeconds: 315360000
+      traefik.frontend.headers.STSIncludeSubdomains: "true"
+      traefik.frontend.headers.STSPreload: "true"
+      traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
+      traefik.frontend.headers.frameDeny: "true"
+      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+################MONITORING#########################
+
+  portainer:
+    image: portainer/portainer
+    hostname: portainer
+    container_name: portainer
+    volumes:
+      - portvol:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+      - traefik_proxy
+    labels:
+      traefik.enable: "true"
+      traefik.backend: portainer
+      traefik.protocol: http
+      traefik.port: 9000
+      traefik.frontend.rule: Host:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.frontend.headers.SSLHost:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      traefik.docker.network: traefik_proxy
+      traefik.frontend.passHostHeader: "true"
+      traefik.frontend.headers.SSLForceHost: "true"
+      traefik.frontend.headers.SSLRedirect: "true"
+      traefik.frontend.headers.browserXSSFilter: "true"
+      traefik.frontend.headers.contentTypeNosniff: "true"
+      traefik.frontend.headers.forceSTSHeader: "true"
+      traefik.frontend.headers.STSSeconds: 315360000
+      traefik.frontend.headers.STSIncludeSubdomains: "true"
+      traefik.frontend.headers.STSPreload: "true"
+      traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
+      traefik.frontend.headers.frameDeny: "true"
+      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+volumes:
+  nextcloud:
+  db:
+  dbg:
+  portvol:
+
+networks: 
+  traefik_proxy: 
+    external: 
+      name: traefik_proxy 
+  default:
+    driver: bridge
+
