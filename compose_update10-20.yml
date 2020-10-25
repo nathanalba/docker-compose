@@ -1,0 +1,130 @@
+version: "2"
+
+networks: 
+  t2_proxy: 
+    external: 
+      name: t2_proxy
+  default:
+    driver: bridge
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro      
+      - $HOMEdocker/nginx/certs:/etc/nginx/certs:ro
+      - $HOME/docker/nginx/etc:/etc/nginx/vhost.d
+      - $HOME/docker/nginx/share:/usr/share/nginx/html
+      - $HOME/docker/nginx/conf:/etc/nginx/conf.d
+      - $HOME/docker/nginx/dhparam:/etc/nginx/dhparam  
+    networks:
+      - t2_proxy
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"      
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-proxy-le
+    volumes_from:
+      - nginx-proxy      
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - $HOME/docker/nginx/certs:/etc/nginx/certs:rw
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    restart: unless-stopped
+    container_name: jellyfin
+    ports:
+      - 8096:8096
+      - 8920:8920
+    volumes:
+      - $HOME/docker/jellyfin/config:/config
+      - $HOME/docker/jellyfin/cache:/cache
+      - ***************************
+    networks:
+      - t2_proxy
+    environment:
+      - VIRTUAL_HOST=*************************
+      - VIRTUAL_PORT=8096
+      - LETSENCRYPT_HOST=**********************
+      - LETSENCRYPT_EMAIL=***********************    
+    
+  guacamole:
+    image: oznu/guacamole:1.2.0-amd64
+    container_name: guacamole
+    volumes:
+      - $HOME/docker/guacamole:/config
+    ports:
+      - 18080:8080
+    networks:
+      - t2_proxy
+    environment:
+      - VIRTUAL_HOST=******************
+      - VIRTUAL_PORT=18080
+      - LETSENCRYPT_HOST=****************
+      - LETSENCRYPT_EMAIL=************
+        
+  unifi: 
+    image: jacobalberty/unifi:latest 
+    container_name: unifi 
+    volumes:
+      - $HOME/unifi:/unifi
+    environment:
+      - TZ=America/New_York
+    ports:
+      - 3478:3478/udp 
+      - 6789:6789/tcp 
+      - 8080:8080/tcp 
+      - 8443:8443/tcp 
+      - 8880:8880/tcp 
+      - 8843:8843/tcp
+      - 10001:10001/udp    
+  scrutiny: 
+    image: linuxserver/scrutiny 
+    container_name: scrutiny 
+    cap_add: 
+      - SYS_RAWIO
+      - SYS_ADMIN #optional
+    environment:
+      - SCRUTINY_API_ENDPOINT=http://localhost:8080
+      - SCRUTINY_WEB=true
+      - SCRUTINY_COLLECTOR=true
+    volumes:
+      - /run/udev:/run/udev:ro
+      - $HOME/docker/scruntiny:/config
+    ports: 
+      - 9999:8080
+    devices:
+      - /dev/sda:/dev/sda
+      - /dev/sdb:/dev/sdb
+      - /dev/sdc:/dev/sdc
+      - /dev/sdd:/dev/sdd
+      - /dev/sde:/dev/sde
+      - /dev/sdf:/dev/sdf
+      - /dev/sdg:/dev/sdg
+      - /dev/sdh:/dev/sdh
+      - /dev/sdi:/dev/sdi
+      - /dev/sdj:/dev/sdj
+      - /dev/sdk:/dev/sdk
+      - /dev/sdl:/dev/sdl
+      - /dev/sdm:/dev/sdm
+  heimdall:
+    image: linuxserver/heimdall
+    container_name: hemi
+    volumes:
+      - $HOME/docker/hemi:/config
+    ports:
+      - 21000:80
+      - 22000:443
+
+  yacht:
+    image: selfhostedpro/yacht
+    container_name: yacht
+    ports:
+      - 9333:8000
+    volumes:
+      - $HOME/docker/yacht:/config
+      - /var/run/docker.sock:/var/run/docker.sock
