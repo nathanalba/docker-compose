@@ -1,10 +1,12 @@
 version: "3"
 services:
    unifi: 
-     image: jacobalberty/unifi 
+     image: jacobalberty/unifi:latest 
      container_name: unifi 
+     networks:
+        - unifinet
      volumes: 
-        - /docker/volume/unifi:/unifi
+        - $HOME/docker/unifi:/unifi
      environment: 
         - TZ=America/New_York 
      restart: unless-stopped 
@@ -16,3 +18,9 @@ services:
       - 8880:8880/tcp 
       - 8843:8843/tcp
       - 10001:10001/udp
+networks: 
+  unifinet: 
+    external: 
+      name: unifinet
+  default:
+    driver: bridge
